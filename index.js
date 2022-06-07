@@ -15,14 +15,14 @@ const createScene = () => {
     //player root part
     const playerRootPart = BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 0.1});
 
-    //sword
-    let sword = BABYLON.SceneLoader.ImportMeshAsync("", "./", "sword.glb");
+    //swordGS
+    let swordGS = BABYLON.SceneLoader.ImportMeshAsync("", "./", "swordGS.glb");
     let grandSlash;
-    sword.then((newMeshes, _particleSystems, _skeletons, animationGroups) => {
-      sword = newMeshes.meshes[0]; //took 3 morbillion years to find out
+    swordGS.then((newMeshes, _particleSystems, _skeletons, animationGroups) => {
+      swordGS = newMeshes.meshes[0]; //took 3 morbillion years to find out
 
-      grandSlash = scene.getAnimationGroupByName("grandSlash");
-      console.log(grandSlash);
+      grandSlash = scene.getAnimationGroupByName("thrust");
+      console.log(scene.animationGroups);
       grandSlash.stop();
     });
     const gl = new BABYLON.GlowLayer("glow", scene, { 
