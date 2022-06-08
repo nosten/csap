@@ -1,15 +1,28 @@
-const canvas = document.getElementById("renderCanvas"); // Get the canvas element
-const engine = new BABYLON.Engine(canvas, true); // Generate the BABYLON 3D engine
+var canvas = document.getElementById("renderCanvas");
 
-// Add your code here matching the playground format
+        var startRenderLoop = function (engine, canvas) {
+            engine.runRenderLoop(function () {
+                if (sceneToRender && sceneToRender.activeCamera) {
+                    sceneToRender.render();
+                }
+            });
+        }
 
-//----------------------------------------------------------{above this line is basically the universal template code}---------------------------------------------------------------------------------
+        var engine = null;
+        var scene = null;
+        var sceneToRender = null;
+        var createDefaultEngine = function() { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false}); };
+
+//----------------------------------------------------------{above this line is basically the universal template code from download function of playground}---------------------------------------------------------------------------------
 
 
-const createScene = () => {
+const createScene = async () => {
   const fps = 144;
   const scene = new BABYLON.Scene(engine);
   scene.clearColor = new BABYLON.Color3(0, 0, 0);
+  let go = false;
+  let done = false;
+  BABYLON.SceneOptimizer.OptimizeAsync(scene);
 
   //camera
   const camera = new BABYLON.UniversalCamera("camera", new BABYLON.Vector3(0,0,0));
@@ -17,59 +30,72 @@ const createScene = () => {
   camera.lowerRadiusLimit = 10;
   delete camera.lowerBetaLimit;
   delete camera.upperBetaLimit;
+  camera.angularSensibility = 2000;
+  camera.speed = 10;
   
   //ORIGIN
-  const playerRootPart = new BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 2});
+  const playerRootPart = new BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 10});
   const redMaterial = new BABYLON.StandardMaterial("redMaterial");
   redMaterial.diffuseTexture = new BABYLON.Texture("./red.jpg");
   redMaterial.emissiveTexture = new BABYLON.Texture("./white.jpg");
   playerRootPart.material = redMaterial;
 
 
-
   //swordGS
   let grandSlash;
-  let swordGS = BABYLON.SceneLoader.ImportMeshAsync("", "./", "swordGS.glb").then((newMeshes, _particleSystems, _skeletons, animationGroups) => { //took 3 morbillion years to find out that swordGS would be set properly after async but if I did something like let activeSword = swordGS; right after outside the async it wouldn't work beacuse activeSword would be holding a promise object ;-;
-    swordGS = newMeshes.meshes[0]; //took 3 morbillion years to find out
-    grandSlash = scene.getAnimationGroupByName("grandSlash");
-    console.log(swordGS);
-    grandSlash.stop();
-    //BABYLON.Animation.CreateAndStartAnimation("moveW", swordGS, "position", 144, 1, camera.position.add(camera.getFrontPosition(10)), camera.position.add(camera.getFrontPosition(10)), BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
-  });
+  let swordGS = await new BABYLON.SceneLoader.ImportMeshAsync("", "./", "swordGS.glb");
+  grandSlash = swordGS.animationGroups[0];
+  console.log(grandSlash);
+  grandSlash.stop();
+  grandSlash.speed = 0.1;
+  
+  swordGS.meshes[0].setEnabled(false);
+
   const gl = new BABYLON.GlowLayer("glow", scene, { 
     mainTextureSamples: 4 
   });
-  gl.intensity = 0.4;
+  gl.intensity = 1;
 
+  let GSBBox =  new BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 200});
+  GSBBox.visibility = 0; 
+  GSBBox.material = redMaterial;
+  GSBBox.setEnabled(false);
 
   //swordT
   let thrust;
-  let swordT = BABYLON.SceneLoader.ImportMeshAsync("", "./", "swordT.glb").then((newMeshes, _particleSystems, _skeletons, animationGroups) => {
-    swordT = newMeshes.meshes[0]; //took 3 morbillion years to find out
-    thrust = scene.getAnimationGroupByName("thrust");
-    thrust.stop();
-    swordT.setEnabled(false);
+  let swordT = await BABYLON.SceneLoader.ImportMeshAsync("", "./", "swordT.glb");
+  thrust = swordT.animationGroups[0];
+  thrust.stop();
+  swordT.meshes[0].setEnabled(false);
 
-  });
+  let TBBox =  new BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 20});
+  TBBox.visibility = 0; 
+  TBBox.material = redMaterial;
+  TBBox.setEnabled(false);
 
-  //active sword
+    //test obj
+    let targetParts = [];
+    const chrisMaterial = new BABYLON.StandardMaterial("chrisMaterial");
+    chrisMaterial.diffuseTexture = new BABYLON.Texture("./chris.png");
+    chrisMaterial.emissiveTexture = new BABYLON.Texture("./white.jpg");
+    for (let i = 0; i < 10; i++){
+      targetParts.push(BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 10}));
+      targetParts[i].material = chrisMaterial;
+      targetParts[i].position = new BABYLON.Vector3(Math.random() * 500 - 250, Math.random() * 500 - 250, Math.random() * 500 - 250);
+      targetParts[i].rotation = new BABYLON.Vector3(Math.random() * 2*Math.PI, Math.random() * 2*Math.PI, Math.random() * 2*Math.PI);
   
+    }
+
   
-  //sword autoTarget & auto 
 
+  //swordP
+  // let grow;
+  // let swordP = await BABYLON.SceneLoader.ImportMeshAsync("", "./", "swordP.glb");
+  // grow = swordP.animationGroups[0];
+  // grow.stop();
+  // swordP.meshes[0].setEnabled(false);
+  // swordP.meshes[0].showBoundingBox = true;
 
-  //test obj
-  let targetParts = [];
-  const chrisMaterial = new BABYLON.StandardMaterial("chrisMaterial");
-  chrisMaterial.diffuseTexture = new BABYLON.Texture("./chris.png");
-  chrisMaterial.emissiveTexture = new BABYLON.Texture("./white.jpg");
-  for (let i = 0; i < 10; i++){
-    targetParts.push(BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 50}));
-    targetParts[i].material = chrisMaterial;
-    targetParts[i].position = new BABYLON.Vector3(Math.random() * 100 - 50, Math.random() * 100 - 50, Math.random() * 100 - 50);
-    targetParts[i].rotation = new BABYLON.Vector3(Math.random() * 2*Math.PI, Math.random() * 2*Math.PI, Math.random() * 2*Math.PI);
-
-  }
   
 
 
@@ -94,16 +120,25 @@ const createScene = () => {
     }
   }
 
-  //position sword correctly
-  //BABYLON.Animation.CreateAndStartAnimation("moveW", activeSword, "position.x", 144, 144, 0, 200, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
 
   //key event arrow function template from https://doc.babylonjs.com/divingDeeper/scene/interactWithScenes
   scene.onPointerObservable.add((pointerInfo) => {
       switch (pointerInfo.type) {
         case BABYLON.PointerEventTypes.POINTERDOWN:
-          console.log("POINTER DOWN");
-          grandSlash.start();
-          thrust.start();
+          if (swordGS.meshes[0].isEnabled()){
+            grandSlash.start();
+            GSBBox.setEnabled(true);
+            BABYLON.Animation.CreateAndStartAnimation("hitboxSlashSize", GSBBox, "scaling", fps, 10, new BABYLON.Vector3(0,0,0), GSBBox.scaling, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+            BABYLON.Animation.CreateAndStartAnimation("hitboxSlashPos", GSBBox, "position", fps, 10, swordGS.meshes[0].position, swordGS.meshes[0].position, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+          } else {
+            thrust.start();
+            TBBox.setEnabled(true);
+            BABYLON.Animation.CreateAndStartAnimation("hitboxThrust", TBBox, "position", fps, 10, camera.getFrontPosition(100), camera.getFrontPosition(500), BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+          }
+          break;
+        case BABYLON.PointerEventTypes.POINTERUP:
+          // GSBBox.setEnabled(false);
+          // TBBox.setEnabled(false);
           break;
       }
     });
@@ -113,44 +148,73 @@ const createScene = () => {
           break;
         case BABYLON.KeyboardEventTypes.KEYUP:
           if (kbInfo.event.key == "1"){
-            swordGS.setEnabled(true);
-            swordT.setEnabled(false);
-            activeSword = swordGS;
+            swordGS.meshes[0].setEnabled(true);
+            swordT.meshes[0].setEnabled(false);
           }
           else if (kbInfo.event.key == "2"){
-            swordT.setEnabled(true);
-            swordGS.setEnabled(false);
-            activeSword = swordT;
+            swordT.meshes[0].setEnabled(true);
+            swordGS.meshes[0].setEnabled(false);
           }
           break;
       }
     });
 
-    scene.registerAfterRender(() => {
-      swordGS.setAbsolutePosition(camera.getFrontPosition(100));
-      swordT.setAbsolutePosition(camera.getFrontPosition(100));
-      swordGS.lookAt(camera.getFrontPosition(200));
-      swordT.lookAt(camera.getFrontPosition(200));
-      swordGS.rotation.x = swordGS.rotation.x + Math.PI/2;
-      swordT.rotation.x = swordT.rotation.x + Math.PI/2;
+
+    scene.registerBeforeRender(() => {
+      swordGS.meshes[0].setAbsolutePosition(camera.getFrontPosition(100));
+      swordT.meshes[0].setAbsolutePosition(camera.getFrontPosition(100));
+      swordGS.meshes[0].lookAt(camera.getFrontPosition(200));
+      swordT.meshes[0].lookAt(camera.getFrontPosition(200));
+
+      for (let i = 0; i < targetParts.length; i++){
+        if ((swordGS.meshes[0].intersectsMesh(targetParts[i], true) || GSBBox.intersectsMesh(targetParts[i], true)) && swordGS.meshes[0].isEnabled()){
+          targetParts[i].setEnabled(false);
+          go = true;
+        }
+        if ((swordT.meshes[0].intersectsMesh(targetParts[i], true) || TBBox.intersectsMesh(targetParts[i], true))  && swordT.meshes[0].isEnabled()){
+          targetParts[i].setEnabled(false);
+          go = true;
+        }
+      }
+      done = true;
+      for (let i = 0; i < targetParts.length; i++){
+        if (targetParts[i].isEnabled()){
+          done = false;
+        }
+      }
+      if (done){
+        console.log('DONE');
+        window.location.replace("https://www.merriam-webster.com/dictionary/bozo#:~:text=%3A%20a%20foolish%20or%20incompetent%20person");
+      }
     });
 
   return scene;
 };
 
 
-//---------------------------------------------------------------{below this line is basically universal template code}-------------------------------------------------------------------------------
+//---------------------------------------------------------------{below this line is basically universal template code from download function of playground}-------------------------------------------------------------------------------
 
-const scene = createScene(); //Call the createScene function
+window.initFunction = async function() {
+                    
+                    
+  var asyncEngineCreation = async function() {
+      try {
+      return createDefaultEngine();
+      } catch(e) {
+      console.log("the available createEngine function failed. Creating the default engine instead");
+      return createDefaultEngine();
+      }
+  }
 
-// Register a render loop to repeatedly render the scene
-engine.runRenderLoop(function () {
-if (scene){
-    scene.render();
-}
+  window.engine = await asyncEngineCreation();
+if (!engine) throw 'engine should not be null.';
+startRenderLoop(engine, canvas);
+window.scene = createScene();};
+initFunction().then(() => {scene.then(returnedScene => { sceneToRender = returnedScene; });
+          
 });
 
-// Watch for browser/canvas resize events
+// Resize
 window.addEventListener("resize", function () {
 engine.resize();
 });
